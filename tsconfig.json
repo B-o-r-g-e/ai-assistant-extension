@@ -1,10 +1,11 @@
 {
   "files": [],
   "compilerOptions": {
-    "baseUrl": ".",
+    "types": ["chrome", "node"],
+    "baseUrl": "./",
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
   },
   "references": [
     { "path": "./tsconfig.app.json" },

@@ -23,7 +23,7 @@ function App() {
     // Check for context menu selections on load
     useEffect(() => {
         if (typeof chrome !== 'undefined' && chrome.runtime) {
-            chrome.runtime.sendMessage({ type: 'GET_SELECTED_TEXT' }, (response) => {
+            chrome.runtime.sendMessage({ type: 'GET_SELECTED_TEXT' }, (response: any) => {
                 if (response?.selectedText) {
                     setSelectedText(response.selectedText);
                     setContextAction(response.action || '');
