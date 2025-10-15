@@ -3,77 +3,30 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 
-// Ensure Chrome AI APIs are available
+// Declare the actual Chrome AI APIs that exist in Chrome 138+
 declare global {
     interface Window {
         ai?: {
             summarizer?: {
-                create: () => Promise<{
-                    summarize: (text: string) => Promise<{ summary: string }>;
-                }>;
+                create: (options?: any) => Promise<any>;
+                capabilities: () => Promise<any>;
             };
-            proofreader?: {
-                create: () => Promise<{
-                    proofread: (text: string) => Promise<{ corrections: string }>;
-                }>;
+            languageModel?: {
+                create: (options?: any) => Promise<any>;
+                capabilities: () => Promise<any>;
             };
             translator?: {
-                create: (options: { targetLanguage: string }) => Promise<{
-                    translate: (text: string) => Promise<{ translations: string }>;
-                }>;
-            };
-            writer?: {
-                create: () => Promise<{
-                    write: (prompt: string) => Promise<{ output: string }>;
-                }>;
-            };
-            rewriter?: {
-                create: (options: { style: string }) => Promise<{
-                    rewrite: (text: string) => Promise<{ output: string }>;
-                }>;
-            };
-            prompt?: {
-                create: (options: { multimodal?: boolean }) => Promise<{
-                    prompt: (input: { text: string; image?: Blob }) => Promise<{ output: string }>;
-                }>;
+                create: (options?: any) => Promise<any>;
+                capabilities: () => Promise<any>;
             };
         };
     }
 
-    namespace chrome {
-        namespace ai {
-            const summarizer: {
-                create: () => Promise<{
-                    summarize: (text: string) => Promise<{ summary: string }>;
-                }>;
-            };
-            const proofreader: {
-                create: () => Promise<{
-                    proofread: (text: string) => Promise<{ corrections: string }>;
-                }>;
-            };
-            const translator: {
-                create: (options: { targetLanguage: string }) => Promise<{
-                    translate: (text: string) => Promise<{ translations: string }>;
-                }>;
-            };
-            const writer: {
-                create: () => Promise<{
-                    write: (prompt: string) => Promise<{ output: string }>;
-                }>;
-            };
-            const rewriter: {
-                create: (options: { style: string }) => Promise<{
-                    rewrite: (text: string) => Promise<{ output: string }>;
-                }>;
-            };
-            const prompt: {
-                create: (options: { multimodal?: boolean }) => Promise<{
-                    prompt: (input: { text: string; image?: Blob }) => Promise<{ output: string }>;
-                }>;
-            };
-        }
-    }
+    // Global Summarizer API (Chrome 138+)
+    var Summarizer: {
+        create: (options?: any) => Promise<any>;
+        availability: () => Promise<string>;
+    };
 }
 
 const root = ReactDOM.createRoot(document.getElementById('root')!);
