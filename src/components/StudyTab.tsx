@@ -34,20 +34,17 @@ const StudyTab: React.FC<StudyTabProps> = ({ initialText = '', contextAction = '
 
     const checkAPIAvailability = async () => {
         try {
-            // Check for the actual Summarizer API
-            if (typeof Summarizer !== 'undefined') {
-                const availability = await Summarizer.availability();
-                console.log('Summarizer availability:', availability);
-                setApiAvailable(availability === 'readily' || availability === 'after-download');
-            } else if (window.ai?.summarizer) {
-                setApiAvailable(true);
-            } else if (window.ai?.languageModel) {
-                // Fallback to language model
-                const capabilities = await window.ai.languageModel.capabilities();
-                setApiAvailable(capabilities.available === 'readily' || capabilities.available === 'after-download');
-            } else {
-                setApiAvailable(false);
-            }
+            // Check for both Summarizer and Proofreader APIs
+            const summarizerAvailable = typeof Summarizer !== 'undefined' ? await Summarizer.availability() : 'no';
+            const proofreaderAvailable = typeof Proofreader !== 'undefined' ? await Proofreader.availability() : 'no';
+
+            console.log('Summarizer availability:', summarizerAvailable);
+            console.log('Proofreader availability:', proofreaderAvailable);
+
+            const isAvailable = (summarizerAvailable === 'readily' || summarizerAvailable === 'after-download') ||
+                (proofreaderAvailable === 'readily' || proofreaderAvailable === 'after-download');
+
+            setApiAvailable(isAvailable || !!window.ai?.languageModel);
         } catch (error) {
             console.error('API check failed:', error);
             setApiAvailable(false);
@@ -115,7 +112,7 @@ const StudyTab: React.FC<StudyTabProps> = ({ initialText = '', contextAction = '
         setCurrentAction('');
     };
 
-    // Proofread using Language Model with specific prompt
+    // Proofread using the actual Proofreader API (Chrome 141+)
     const handleProofread = async () => {
         if (!inputText.trim()) return;
 
@@ -124,7 +121,58 @@ const StudyTab: React.FC<StudyTabProps> = ({ initialText = '', contextAction = '
         setOutput('');
 
         try {
-            if (window.ai?.languageModel) {
+            // Try the actual Proofreader API first
+            if (typeof Proofreader !== 'undefined') {
+                console.log('Using Proofreader API');
+
+                const availability = await Proofreader.availability();
+
+                if (availability === 'no') {
+                    setOutput('❌ **Error**: Proofreader API is not available on this device. Try enabling chrome://flags/#proofreader-api-for-gemini-nano');
+                    setIsLoading(false);
+                    return;
+                }
+
+                // Create proofreader with options
+                const proofreader = await Proofreader.create({
+                    expectedInputLanguages: ['en'],
+                    monitor(m: any) {
+                        m.addEventListener('downloadprogress', (e: any) => {
+                            console.log(`Downloading model: ${e.loaded}% complete`);
+                            setCurrentAction(`Downloading AI model: ${Math.round(e.loaded * 100)}%`);
+                        });
+                    }
+                });
+
+                // Get the proofreading result
+                const proofreadResult = await proofreader.proofread(inputText);
+
+                // Format the output with corrections
+                let outputText = `✏️ **Proofread Results:**\n\n`;
+
+                if (proofreadResult.corrections && proofreadResult.corrections.length > 0) {
+                    outputText += `**Corrected Text:**\n${proofreadResult.corrected}\n\n`;
+                    outputText += `**Corrections Found (${proofreadResult.corrections.length}):**\n\n`;
+
+                    proofreadResult.corrections.forEach((correction: any, index: number) => {
+                        const originalText = inputText.substring(correction.startIndex, correction.endIndex);
+                        outputText += `${index + 1}. "${originalText}" → "${correction.replacement}"\n`;
+                        if (correction.type) {
+                            outputText += `   Type: ${correction.type}\n`;
+                        }
+                        if (correction.explanation) {
+                            outputText += `   ${correction.explanation}\n`;
+                        }
+                        outputText += `\n`;
+                    });
+                } else {
+                    outputText += `✅ **No corrections needed!**\n\nYour text looks good.`;
+                }
+
+                setOutput(outputText);
+
+            } else if (window.ai?.languageModel) {
+                // Fallback to Language Model
                 console.log('Using Language Model for proofreading');
 
                 const capabilities = await window.ai.languageModel.capabilities();
@@ -150,7 +198,7 @@ const StudyTab: React.FC<StudyTabProps> = ({ initialText = '', contextAction = '
 
             } else {
                 // Demo mode
-                setOutput(`✏️ **Proofread Results** (Demo Mode - Chrome AI not available):\n\nThis is a simulated proofreading. To use real AI:\n\n1. Use Chrome 138+ or Chrome Canary\n2. Enable chrome://flags/#prompt-api-for-gemini-nano\n3. Download the model from chrome://components/\n\n**Your text:** "${inputText.substring(0, 100)}${inputText.length > 100 ? '...' : ''}"\n\n**Suggestions:**\n• Check for proper punctuation\n• Consider sentence variety\n• Verify subject-verb agreement`);
+                setOutput(`✏️ **Proofread Results** (Demo Mode - Chrome AI not available):\n\nThis is a simulated proofreading. To use real AI:\n\n1. Use Chrome 141+ or Chrome Canary\n2. Enable chrome://flags/#proofreader-api-for-gemini-nano\n3. Download the model from chrome://components/\n\n**Your text:** "${inputText.substring(0, 100)}${inputText.length > 100 ? '...' : ''}"\n\n**Suggestions:**\n• Check for proper punctuation\n• Consider sentence variety\n• Verify subject-verb agreement`);
             }
         } catch (error: any) {
             console.error('Proofreading failed:', error);

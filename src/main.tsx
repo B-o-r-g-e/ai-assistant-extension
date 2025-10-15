@@ -27,6 +27,19 @@ declare global {
         create: (options?: any) => Promise<any>;
         availability: () => Promise<string>;
     };
+
+    // Global Proofreader API (Chrome 141+)
+    var Proofreader: {
+        create: (options?: any) => Promise<any>;
+        availability: () => Promise<string>;
+    };
+
+    // Global LanguageModel API (Chrome 138+) - The Prompt API
+    var LanguageModel: {
+        create: (options?: any) => Promise<any>;
+        availability: () => Promise<string>;
+        params: () => Promise<any>;
+    };
 }
 
 const root = ReactDOM.createRoot(document.getElementById('root')!);

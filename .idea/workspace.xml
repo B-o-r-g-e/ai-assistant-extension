@@ -4,11 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e8ab8061-1af9-49ac-91c7-e1c743b4171b" name="Changes" comment="first commit">
+    <list default="true" id="e8ab8061-1af9-49ac-91c7-e1c743b4171b" name="Changes" comment="changed chrome.ai to windows.ai">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/components/CareerTab.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/CareerTab.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/components/StudyTab.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/StudyTab.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/TravelTab.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/TravelTab.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -109,7 +108,7 @@
       <workItem from="1759359449988" duration="390000" />
       <workItem from="1759844153571" duration="940000" />
       <workItem from="1759846614294" duration="59000" />
-      <workItem from="1760497421651" duration="3232000" />
+      <workItem from="1760497421651" duration="6822000" />
     </task>
     <task id="LOCAL-00001" summary="first commit">
       <option name="closed" value="true" />
@@ -119,7 +118,15 @@
       <option name="project" value="LOCAL" />
       <updated>1759195398516</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="changed chrome.ai to windows.ai">
+      <option name="closed" value="true" />
+      <created>1760504252058</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1760504252058</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -138,6 +145,19 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="first commit" />
-    <option name="LAST_COMMIT_MESSAGE" value="first commit" />
+    <MESSAGE value="changed chrome.ai to windows.ai" />
+    <option name="LAST_COMMIT_MESSAGE" value="changed chrome.ai to windows.ai" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="javascript">
+          <url>file://$PROJECT_DIR$/src/components/StudyTab.tsx</url>
+          <line>17</line>
+          <properties lambdaOrdinal="-1" />
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>

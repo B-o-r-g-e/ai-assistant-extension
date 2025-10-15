@@ -18,10 +18,17 @@ const CareerTab: React.FC = () => {
 
     const checkAPIAvailability = async () => {
         try {
-            if (window.ai?.languageModel) {
+            // Check for the global LanguageModel API (Prompt API)
+            if (typeof LanguageModel !== 'undefined') {
+                const availability = await LanguageModel.availability();
+                console.log('LanguageModel availability:', availability);
+                setApiAvailable(availability === 'readily' || availability === 'after-download');
+            } else if (window.ai?.languageModel) {
                 const capabilities = await window.ai.languageModel.capabilities();
+                console.log('Language Model capabilities:', capabilities);
                 setApiAvailable(capabilities.available === 'readily' || capabilities.available === 'after-download');
             } else {
+                console.log('LanguageModel API not found');
                 setApiAvailable(false);
             }
         } catch (error) {
@@ -30,7 +37,7 @@ const CareerTab: React.FC = () => {
         }
     };
 
-    // Generate cover letter using Language Model API
+    // Generate cover letter using LanguageModel API (Prompt API)
     const handleGenerateCoverLetter = async () => {
         if (!jobDescription.trim()) return;
 
@@ -39,11 +46,49 @@ const CareerTab: React.FC = () => {
         setOutput('');
 
         try {
-            if (window.ai?.languageModel) {
-                console.log('Using Language Model API for cover letter');
+            // Try the global LanguageModel API first (Chrome 138+)
+            if (typeof LanguageModel !== 'undefined') {
+                console.log('Using LanguageModel API (Prompt API)');
+
+                const availability = await LanguageModel.availability();
+
+                if (availability === 'no') {
+                    setOutput('❌ **Error**: LanguageModel API is not available. Enable chrome://flags/#prompt-api-for-gemini-nano');
+                    setIsLoading(false);
+                    return;
+                }
+
+                // Create a session with initial system prompt
+                const session = await LanguageModel.create({
+                    initialPrompts: [
+                        {
+                            role: 'system',
+                            content: 'You are a professional career advisor and expert cover letter writer. Create compelling, personalized cover letters that highlight relevant skills and demonstrate genuine interest in the role.'
+                        }
+                    ],
+                    monitor(m: any) {
+                        m.addEventListener('downloadprogress', (e: any) => {
+                            console.log(`Downloading model: ${e.loaded}% complete`);
+                            setCurrentAction(`Downloading AI model: ${Math.round(e.loaded * 100)}%`);
+                        });
+                    }
+                });
+
+                // Generate the cover letter
+                const prompt = `Write a professional cover letter for this job posting:\n\n${jobDescription}\n\nMake it personalized, highlight relevant skills, show enthusiasm, and keep it concise (around 3-4 paragraphs).`;
+                const result = await session.prompt(prompt);
+
+                setOutput(`📄 **Generated Cover Letter:**\n\n${result}`);
+
+                // Clean up the session
+                session.destroy();
+
+            } else if (window.ai?.languageModel) {
+                // Fallback to window.ai.languageModel
+                console.log('Using window.ai.languageModel');
 
                 const session = await window.ai.languageModel.create({
-                    systemPrompt: 'You are a professional career advisor who writes compelling cover letters. Create personalized, professional cover letters that highlight relevant skills and experience.',
+                    systemPrompt: 'You are a professional career advisor who writes compelling cover letters.',
                     monitor(m: any) {
                         m.addEventListener('downloadprogress', (e: any) => {
                             setCurrentAction(`Downloading AI model: ${Math.round(e.loaded * 100)}%`);
@@ -51,13 +96,13 @@ const CareerTab: React.FC = () => {
                     }
                 });
 
-                const prompt = `Write a professional cover letter for this job posting:\n\n${jobDescription}\n\nMake it personalized, highlight relevant skills, and express genuine interest in the role.`;
+                const prompt = `Write a professional cover letter for this job posting:\n\n${jobDescription}`;
                 const result = await session.prompt(prompt);
-                setOutput(result);
+                setOutput(`📄 **Generated Cover Letter:**\n\n${result}`);
 
             } else {
                 // Demo mode
-                setOutput(`📄 **Cover Letter** (Demo Mode):\n\nDear Hiring Manager,\n\nI am writing to express my strong interest in the position described. Based on your job posting:\n\n"${jobDescription.substring(0, 100)}${jobDescription.length > 100 ? '...' : ''}"\n\nI believe my skills and experience make me an excellent candidate.\n\n**To use real AI generation:**\n1. Enable chrome://flags/#prompt-api-for-gemini-nano\n2. Download model from chrome://components/\n3. Restart Chrome\n\nBest regards,\n[Your Name]`);
+                setOutput(`📄 **Cover Letter** (Demo Mode):\n\nDear Hiring Manager,\n\nI am writing to express my strong interest in the position described.\n\n**To use real AI generation:**\n1. Enable chrome://flags/#prompt-api-for-gemini-nano\n2. Go to chrome://components/ and download "Optimization Guide On Device Model"\n3. Restart Chrome\n\n**Your job description:**\n"${jobDescription.substring(0, 100)}${jobDescription.length > 100 ? '...' : ''}"`);
             }
         } catch (error: any) {
             console.error('Cover letter generation failed:', error);
@@ -68,7 +113,7 @@ const CareerTab: React.FC = () => {
         setCurrentAction('');
     };
 
-    // Rephrase paragraph using Language Model
+    // Rephrase paragraph using LanguageModel
     const handleRephraseParagraph = async () => {
         if (!jobDescription.trim()) return;
 
@@ -77,11 +122,24 @@ const CareerTab: React.FC = () => {
         setOutput('');
 
         try {
-            if (window.ai?.languageModel) {
-                console.log('Using Language Model API for rephrasing');
+            if (typeof LanguageModel !== 'undefined') {
+                console.log('Using LanguageModel API for rephrasing');
 
-                const session = await window.ai.languageModel.create({
-                    systemPrompt: 'You are a professional writing assistant. Rephrase text to be more professional, clear, and impactful while maintaining the original meaning.',
+                const availability = await LanguageModel.availability();
+
+                if (availability === 'no') {
+                    setOutput('❌ **Error**: LanguageModel API is not available.');
+                    setIsLoading(false);
+                    return;
+                }
+
+                const session = await LanguageModel.create({
+                    initialPrompts: [
+                        {
+                            role: 'system',
+                            content: 'You are a professional writing assistant. Rephrase text to be more professional, clear, and impactful while maintaining the original meaning.'
+                        }
+                    ],
                     monitor(m: any) {
                         m.addEventListener('downloadprogress', (e: any) => {
                             setCurrentAction(`Downloading AI model: ${Math.round(e.loaded * 100)}%`);
@@ -89,13 +147,26 @@ const CareerTab: React.FC = () => {
                     }
                 });
 
-                const prompt = `Please rephrase the following text in a more professional manner:\n\n${jobDescription}`;
-                const result = await session.prompt(prompt);
-                setOutput(result);
+                const result = await session.prompt(`Please rephrase the following text in a more professional manner:\n\n${jobDescription}`);
+                setOutput(`✏️ **Rephrased Text:**\n\n${result}`);
+
+                session.destroy();
+
+            } else if (window.ai?.languageModel) {
+                const session = await window.ai.languageModel.create({
+                    systemPrompt: 'You are a professional writing assistant. Rephrase text to be more professional.',
+                    monitor(m: any) {
+                        m.addEventListener('downloadprogress', (e: any) => {
+                            setCurrentAction(`Downloading AI model: ${Math.round(e.loaded * 100)}%`);
+                        });
+                    }
+                });
+
+                const result = await session.prompt(`Rephrase this professionally:\n\n${jobDescription}`);
+                setOutput(`✏️ **Rephrased Text:**\n\n${result}`);
 
             } else {
-                // Demo mode
-                setOutput(`✏️ **Rephrased Text** (Demo Mode):\n\n**Original:**\n"${jobDescription.substring(0, 150)}${jobDescription.length > 150 ? '...' : ''}"\n\n**Rephrased version would appear here with Chrome AI enabled.**\n\nEnable AI at chrome://flags/#prompt-api-for-gemini-nano`);
+                setOutput(`✏️ **Rephrased Text** (Demo Mode):\n\n**Original:**\n"${jobDescription.substring(0, 150)}${jobDescription.length > 150 ? '...' : ''}"\n\n**Enable Chrome AI to see the rephrased version.**`);
             }
         } catch (error: any) {
             console.error('Rephrasing failed:', error);
@@ -106,7 +177,7 @@ const CareerTab: React.FC = () => {
         setCurrentAction('');
     };
 
-    // Extract skills summary using Summarizer or Language Model
+    // Extract skills summary using Summarizer or LanguageModel
     const handleExtractSkills = async () => {
         if (!jobDescription.trim()) return;
 
@@ -119,11 +190,42 @@ const CareerTab: React.FC = () => {
             if (typeof Summarizer !== 'undefined') {
                 console.log('Using Summarizer API for skills extraction');
 
-                const summarizer = await Summarizer.create({
-                    sharedContext: 'Extract key skills and requirements from this job posting',
-                    type: 'key-points',
-                    format: 'markdown',
-                    length: 'medium',
+                const availability = await Summarizer.availability();
+
+                if (availability !== 'no') {
+                    const summarizer = await Summarizer.create({
+                        sharedContext: 'Extract key skills and requirements from this job posting',
+                        type: 'key-points',
+                        format: 'markdown',
+                        length: 'medium',
+                        monitor(m: any) {
+                            m.addEventListener('downloadprogress', (e: any) => {
+                                setCurrentAction(`Downloading AI model: ${Math.round(e.loaded * 100)}%`);
+                            });
+                        }
+                    });
+
+                    const summary = await summarizer.summarize(jobDescription, {
+                        context: 'Focus on technical skills, soft skills, experience requirements, and qualifications'
+                    });
+                    setOutput(`🎯 **Skills Summary:**\n\n${summary}`);
+                    setIsLoading(false);
+                    setCurrentAction('');
+                    return;
+                }
+            }
+
+            // Fallback to LanguageModel
+            if (typeof LanguageModel !== 'undefined') {
+                console.log('Using LanguageModel API for skills extraction');
+
+                const session = await LanguageModel.create({
+                    initialPrompts: [
+                        {
+                            role: 'system',
+                            content: 'You are an expert at analyzing job descriptions. Extract and categorize key skills, requirements, and qualifications in a clear, bulleted format.'
+                        }
+                    ],
                     monitor(m: any) {
                         m.addEventListener('downloadprogress', (e: any) => {
                             setCurrentAction(`Downloading AI model: ${Math.round(e.loaded * 100)}%`);
@@ -131,30 +233,27 @@ const CareerTab: React.FC = () => {
                     }
                 });
 
-                const summary = await summarizer.summarize(jobDescription, {
-                    context: 'Focus on technical skills, soft skills, experience requirements, and qualifications'
-                });
-                setOutput(`🎯 **Skills Summary:**\n\n${summary}`);
-
-            } else if (window.ai?.languageModel) {
-                console.log('Using Language Model API for skills extraction');
-
-                const session = await window.ai.languageModel.create({
-                    systemPrompt: 'You are an expert at analyzing job descriptions. Extract and categorize key skills, requirements, and qualifications.',
-                    monitor(m: any) {
-                        m.addEventListener('downloadprogress', (e: any) => {
-                            setCurrentAction(`Downloading AI model: ${Math.round(e.loaded * 100)}%`);
-                        });
-                    }
-                });
-
-                const prompt = `Analyze this job description and extract:\n1. Technical skills required\n2. Soft skills needed\n3. Experience level\n4. Key qualifications\n\nJob Description:\n${jobDescription}`;
+                const prompt = `Analyze this job description and extract:\n- Technical skills required\n- Soft skills needed\n- Experience level\n- Key qualifications\n\nJob Description:\n${jobDescription}`;
                 const result = await session.prompt(prompt);
                 setOutput(`🎯 **Skills Summary:**\n\n${result}`);
 
+                session.destroy();
+
+            } else if (window.ai?.languageModel) {
+                const session = await window.ai.languageModel.create({
+                    systemPrompt: 'Extract and categorize skills from job descriptions.',
+                    monitor(m: any) {
+                        m.addEventListener('downloadprogress', (e: any) => {
+                            setCurrentAction(`Downloading AI model: ${Math.round(e.loaded * 100)}%`);
+                        });
+                    }
+                });
+
+                const result = await session.prompt(`Extract skills from:\n${jobDescription}`);
+                setOutput(`🎯 **Skills Summary:**\n\n${result}`);
+
             } else {
-                // Demo mode
-                setOutput(`🎯 **Skills Summary** (Demo Mode):\n\n**Key Skills Required:**\n• Technical Skills\n• Communication Skills\n• Problem-solving\n• Team Collaboration\n\n**Experience Level:** Mid to Senior Level\n\n**Enable Chrome AI for detailed analysis:**\nchrome://flags/#prompt-api-for-gemini-nano`);
+                setOutput(`🎯 **Skills Summary** (Demo Mode):\n\n**Key Skills Required:**\n• Technical Skills\n• Communication Skills\n• Problem-solving\n\n**Enable Chrome AI for detailed analysis.**`);
             }
         } catch (error: any) {
             console.error('Skills extraction failed:', error);
