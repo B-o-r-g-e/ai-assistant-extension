@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, CheckCircle, Loader2 } from 'lucide-react';
+import { BookOpen, CheckCircle, Loader2, Trash2 } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Textarea } from './ui/Textarea';
 import OutputBox from './OutputBox';
+import { usePersistedState, clearPersistedState } from '../hooks/usePersistedState';
 
 interface StudyTabProps {
     initialText?: string;
@@ -10,8 +11,8 @@ interface StudyTabProps {
 }
 
 const StudyTab: React.FC<StudyTabProps> = ({ initialText = '', contextAction = '' }) => {
-    const [inputText, setInputText] = useState(initialText);
-    const [output, setOutput] = useState('');
+    const [inputText, setInputText] = usePersistedState('study_input', initialText);
+    const [output, setOutput] = usePersistedState('study_output', '');
     const [isLoading, setIsLoading] = useState(false);
     const [currentAction, setCurrentAction] = useState<string>('');
     const [apiAvailable, setApiAvailable] = useState<boolean | null>(null);
@@ -31,6 +32,13 @@ const StudyTab: React.FC<StudyTabProps> = ({ initialText = '', contextAction = '
             }
         }
     }, [initialText, contextAction]);
+
+    // Clear all data
+    const handleClear = () => {
+        setInputText('');
+        setOutput('');
+        clearPersistedState(['study_input', 'study_output']);
+    };
 
     const checkAPIAvailability = async () => {
         try {
@@ -147,21 +155,29 @@ const StudyTab: React.FC<StudyTabProps> = ({ initialText = '', contextAction = '
                 // Get the proofreading result
                 const proofreadResult = await proofreader.proofread(inputText);
 
+                console.log('Proofread result:', proofreadResult);
+
                 // Format the output with corrections
                 let outputText = `✏️ **Proofread Results:**\n\n`;
 
                 if (proofreadResult.corrections && proofreadResult.corrections.length > 0) {
-                    outputText += `**Corrected Text:**\n${proofreadResult.corrected}\n\n`;
+                    // Show corrected text if available
+                    if (proofreadResult.corrected) {
+                        outputText += `**Corrected Text:**\n${proofreadResult.corrected}\n\n`;
+                    }
+
                     outputText += `**Corrections Found (${proofreadResult.corrections.length}):**\n\n`;
 
                     proofreadResult.corrections.forEach((correction: any, index: number) => {
                         const originalText = inputText.substring(correction.startIndex, correction.endIndex);
-                        outputText += `${index + 1}. "${originalText}" → "${correction.replacement}"\n`;
+                        const replacement = correction.replacement || correction.correction || '[correction not available]';
+
+                        outputText += `${index + 1}. "${originalText}" → "${replacement}"\n`;
                         if (correction.type) {
                             outputText += `   Type: ${correction.type}\n`;
                         }
                         if (correction.explanation) {
-                            outputText += `   ${correction.explanation}\n`;
+                            outputText += `   Explanation: ${correction.explanation}\n`;
                         }
                         outputText += `\n`;
                     });
@@ -242,9 +258,22 @@ const StudyTab: React.FC<StudyTabProps> = ({ initialText = '', contextAction = '
             {/* Input Section */}
             <div className="space-y-4">
                 <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">
-                        Enter text to analyze
-                    </label>
+                    <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm font-medium text-foreground">
+                            Enter text to analyze
+                        </label>
+                        {(inputText || output) && (
+                            <Button
+                                onClick={handleClear}
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs"
+                            >
+                                <Trash2 className="w-3 h-3 mr-1" />
+                                Clear
+                            </Button>
+                        )}
+                    </div>
                     <Textarea
                         placeholder="Paste your study material, notes, or any text you want to summarize or proofread..."
                         value={inputText}

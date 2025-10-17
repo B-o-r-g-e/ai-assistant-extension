@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plane, Upload, Globe, Image as ImageIcon, Loader2, X } from 'lucide-react';
+import { Plane, Upload, Globe, Image as ImageIcon, Loader2, X, Trash2 } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Textarea } from './ui/Textarea';
 import OutputBox from './OutputBox';
+import { usePersistedState, clearPersistedState } from '../hooks/usePersistedState';
 
 const TravelTab: React.FC = () => {
-    const [textInput, setTextInput] = useState('');
+    const [textInput, setTextInput] = usePersistedState('travel_input', '');
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [output, setOutput] = useState('');
@@ -21,13 +22,18 @@ const TravelTab: React.FC = () => {
 
     const checkAPIAvailability = async () => {
         try {
-            if (window.ai?.languageModel) {
+            if (typeof LanguageModel !== 'undefined') {
+                const availability = await LanguageModel.availability();
+                console.log('LanguageModel availability:', availability);
+                setApiAvailable(availability === 'readily' || availability === 'after-download');
+            } else if (typeof Translator !== 'undefined') {
+                console.log('Translator API found');
+                setApiAvailable(true);
+            } else if (window.ai?.languageModel) {
                 const capabilities = await window.ai.languageModel.capabilities();
                 setApiAvailable(capabilities.available === 'readily' || capabilities.available === 'after-download');
-            } else if (window.ai?.translator) {
-                const capabilities = await window.ai.translator.capabilities();
-                setApiAvailable(capabilities.available === 'readily' || capabilities.available === 'after-download');
             } else {
+                console.log('No translation APIs found');
                 setApiAvailable(false);
             }
         } catch (error) {
@@ -42,7 +48,6 @@ const TravelTab: React.FC = () => {
         if (file && file.type.startsWith('image/')) {
             setSelectedImage(file);
 
-            // Create preview
             const reader = new FileReader();
             reader.onload = (e) => {
                 setImagePreview(e.target?.result as string);
@@ -60,7 +65,7 @@ const TravelTab: React.FC = () => {
         }
     };
 
-    // Translate text using Language Model
+    // Translate text
     const handleTranslateText = async () => {
         if (!textInput.trim() && !selectedImage) return;
 
@@ -69,23 +74,31 @@ const TravelTab: React.FC = () => {
         setOutput('');
 
         try {
-            let textToTranslate = textInput;
-
-            // If there's an image, inform user we need text extracted first
             if (selectedImage && !textInput.trim()) {
-                setOutput('📸 **Note**: Please add the text you want to translate in the text box. Image OCR is not yet supported in this version.');
+                setOutput('📸 **Note**: Please add the text you want to translate in the text box. Image OCR is not yet supported.');
                 setIsLoading(false);
                 setCurrentAction('');
                 return;
             }
 
-            // Try the Translator API first (if available)
-            if (window.ai?.translator) {
-                console.log('Using Translator API');
+            const textToTranslate = textInput;
 
-                const translator = await window.ai.translator.create({
-                    sourceLanguage: 'auto', // Auto-detect source language
-                    targetLanguage: 'en',
+            // Try LanguageModel first (best for auto-detection)
+            if (typeof LanguageModel !== 'undefined') {
+                console.log('Using LanguageModel API for translation');
+
+                const availability = await LanguageModel.availability();
+                if (availability === 'no') {
+                    throw new Error('LanguageModel not available');
+                }
+
+                const session = await LanguageModel.create({
+                    initialPrompts: [
+                        {
+                            role: 'system',
+                            content: 'You are a professional translator. Translate any text to English accurately. Only output the translation, nothing else.'
+                        }
+                    ],
                     monitor(m: any) {
                         m.addEventListener('downloadprogress', (e: any) => {
                             setCurrentAction(`Downloading AI model: ${Math.round(e.loaded * 100)}%`);
@@ -93,15 +106,15 @@ const TravelTab: React.FC = () => {
                     }
                 });
 
-                const result = await translator.translate(textToTranslate);
-                setOutput(`🌍 **Translation to English:**\n\n${result}`);
+                const result = await session.prompt(textToTranslate);
+                setOutput(`🌍 **Translation to English:**\n\n**Original:**\n"${textToTranslate}"\n\n**Translated:**\n"${result.trim()}"`);
+                session.destroy();
 
             } else if (window.ai?.languageModel) {
-                // Fallback to Language Model
-                console.log('Using Language Model API for translation');
+                console.log('Using window.ai.languageModel for translation');
 
                 const session = await window.ai.languageModel.create({
-                    systemPrompt: 'You are a professional translator. Translate text to English accurately while preserving the original meaning and context.',
+                    systemPrompt: 'You are a professional translator. Translate to English accurately.',
                     monitor(m: any) {
                         m.addEventListener('downloadprogress', (e: any) => {
                             setCurrentAction(`Downloading AI model: ${Math.round(e.loaded * 100)}%`);
@@ -109,13 +122,11 @@ const TravelTab: React.FC = () => {
                     }
                 });
 
-                const prompt = `Translate the following text to English:\n\n${textToTranslate}`;
-                const result = await session.prompt(prompt);
-                setOutput(`🌍 **Translation to English:**\n\n${result}`);
+                const result = await session.prompt(`Translate to English:\n\n${textToTranslate}`);
+                setOutput(`🌍 **Translation to English:**\n\n**Original:**\n"${textToTranslate}"\n\n**Translated:**\n"${result.trim()}"`);
 
             } else {
-                // Demo mode
-                setOutput(`🌍 **Translation to English** (Demo Mode):\n\n**Original Text:**\n"${textToTranslate.substring(0, 100)}${textToTranslate.length > 100 ? '...' : ''}"\n\n**Translated text would appear here with Chrome AI enabled.**\n\nEnable AI at chrome://flags/#prompt-api-for-gemini-nano`);
+                setOutput(`🌍 **Translation** (Demo Mode):\n\n**Original:**\n"${textToTranslate.substring(0, 100)}${textToTranslate.length > 100 ? '...' : ''}"\n\n**Enable Chrome AI:**\n1. chrome://flags/#prompt-api-for-gemini-nano\n2. chrome://components/ - Download model\n3. Restart Chrome`);
             }
         } catch (error: any) {
             console.error('Translation failed:', error);
@@ -126,7 +137,7 @@ const TravelTab: React.FC = () => {
         setCurrentAction('');
     };
 
-    // Generate explanation from image/text using Language Model
+    // Get travel insights
     const handleExplainContent = async () => {
         if (!textInput.trim() && !selectedImage) return;
 
@@ -138,18 +149,42 @@ const TravelTab: React.FC = () => {
             let prompt = '';
 
             if (selectedImage && textInput) {
-                prompt = `I have an image (${selectedImage.name}) and this text: "${textInput}". Please provide helpful travel information, cultural context, and explanations about this content.`;
+                prompt = `I have an image (${selectedImage.name}) and this text: "${textInput}". Provide helpful travel information, cultural context, and explanations.`;
             } else if (selectedImage) {
-                prompt = `I have an image of what appears to be a travel-related item (${selectedImage.name}). Please provide general travel tips and advice for dealing with menus, signs, and documents in foreign countries.`;
+                prompt = `I have an image (${selectedImage.name}). Provide general travel tips for dealing with menus, signs, and documents in foreign countries.`;
             } else {
                 prompt = `Provide helpful travel information and cultural context about: ${textInput}`;
             }
 
-            if (window.ai?.languageModel) {
-                console.log('Using Language Model API for content explanation');
+            if (typeof LanguageModel !== 'undefined') {
+                console.log('Using LanguageModel API for travel insights');
 
+                const availability = await LanguageModel.availability();
+                if (availability === 'no') {
+                    throw new Error('LanguageModel not available');
+                }
+
+                const session = await LanguageModel.create({
+                    initialPrompts: [
+                        {
+                            role: 'system',
+                            content: 'You are a knowledgeable travel assistant. Provide helpful information about locations, cultural context, travel tips, and practical advice.'
+                        }
+                    ],
+                    monitor(m: any) {
+                        m.addEventListener('downloadprogress', (e: any) => {
+                            setCurrentAction(`Downloading AI model: ${Math.round(e.loaded * 100)}%`);
+                        });
+                    }
+                });
+
+                const result = await session.prompt(prompt);
+                setOutput(`🧭 **Travel Insights:**\n\n${result}`);
+                session.destroy();
+
+            } else if (window.ai?.languageModel) {
                 const session = await window.ai.languageModel.create({
-                    systemPrompt: 'You are a knowledgeable travel assistant. Provide helpful information about locations, cultural context, travel tips, and practical advice.',
+                    systemPrompt: 'You are a knowledgeable travel assistant.',
                     monitor(m: any) {
                         m.addEventListener('downloadprogress', (e: any) => {
                             setCurrentAction(`Downloading AI model: ${Math.round(e.loaded * 100)}%`);
@@ -161,8 +196,7 @@ const TravelTab: React.FC = () => {
                 setOutput(`🧭 **Travel Insights:**\n\n${result}`);
 
             } else {
-                // Demo mode
-                setOutput(`🧭 **Content Analysis** (Demo Mode):\n\n${selectedImage ? '📸 **Image provided:** ' + selectedImage.name + '\n\n' : ''}**Text Analysis:**\n"${textInput || 'No text provided'}"\n\n**Detailed travel insights would appear here with Chrome AI enabled.**\n\nEnable AI at chrome://flags/#prompt-api-for-gemini-nano`);
+                setOutput(`🧭 **Travel Insights** (Demo Mode):\n\n${selectedImage ? '📸 Image: ' + selectedImage.name + '\n\n' : ''}**Text:** "${textInput || 'None'}"\n\n**Enable Chrome AI for real insights.**`);
             }
         } catch (error: any) {
             console.error('Content analysis failed:', error);
@@ -188,7 +222,7 @@ const TravelTab: React.FC = () => {
                 </div>
             </div>
 
-            {/* API Status Indicator */}
+            {/* API Status */}
             {apiAvailable !== null && (
                 <div className={`p-3 rounded-lg text-sm ${
                     apiAvailable
@@ -203,7 +237,7 @@ const TravelTab: React.FC = () => {
                 </div>
             )}
 
-            {/* Image Upload Section */}
+            {/* Image Upload */}
             <div className="space-y-4">
                 <div>
                     <label className="text-sm font-medium text-foreground mb-2 block">
@@ -213,11 +247,7 @@ const TravelTab: React.FC = () => {
                         {imagePreview ? (
                             <div className="space-y-3">
                                 <div className="relative inline-block">
-                                    <img
-                                        src={imagePreview}
-                                        alt="Preview"
-                                        className="max-h-32 rounded-lg shadow-sm"
-                                    />
+                                    <img src={imagePreview} alt="Preview" className="max-h-32 rounded-lg shadow-sm" />
                                     <button
                                         onClick={handleRemoveImage}
                                         className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 hover:bg-destructive/80"
@@ -225,22 +255,16 @@ const TravelTab: React.FC = () => {
                                         <X className="w-3 h-3" />
                                     </button>
                                 </div>
-                                <p className="text-sm text-muted-foreground">
-                                    {selectedImage?.name}
-                                </p>
+                                <p className="text-sm text-muted-foreground">{selectedImage?.name}</p>
                             </div>
                         ) : (
                             <div className="space-y-3">
                                 <ImageIcon className="w-8 h-8 text-muted-foreground mx-auto" />
                                 <div>
                                     <p className="text-sm text-muted-foreground mb-2">
-                                        Upload a menu, sign, or any travel-related image
+                                        Upload a menu, sign, or travel-related image
                                     </p>
-                                    <Button
-                                        onClick={() => fileInputRef.current?.click()}
-                                        variant="outline"
-                                        size="sm"
-                                    >
+                                    <Button onClick={() => fileInputRef.current?.click()} variant="outline" size="sm">
                                         <Upload className="w-4 h-4 mr-2" />
                                         Choose Image
                                     </Button>
@@ -257,7 +281,7 @@ const TravelTab: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Text Input Section */}
+                {/* Text Input */}
                 <div>
                     <label className="text-sm font-medium text-foreground mb-2 block">
                         Text to Translate or Context
@@ -302,7 +326,7 @@ const TravelTab: React.FC = () => {
                 </div>
             </div>
 
-            {/* Output Section */}
+            {/* Output */}
             {(output || isLoading) && (
                 <OutputBox
                     content={output}

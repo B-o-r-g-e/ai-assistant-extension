@@ -40,6 +40,12 @@ declare global {
         availability: () => Promise<string>;
         params: () => Promise<any>;
     };
+
+    // Global Translator API (Chrome 138+)
+    var Translator: {
+        create: (options?: any) => Promise<any>;
+        availability: (options?: any) => Promise<string>;
+    };
 }
 
 const root = ReactDOM.createRoot(document.getElementById('root')!);

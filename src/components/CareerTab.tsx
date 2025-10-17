@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Briefcase, FileText, RefreshCw, Target, Loader2 } from 'lucide-react';
+import { Briefcase, FileText, RefreshCw, Target, Loader2, Trash2 } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Textarea } from './ui/Textarea';
 import OutputBox from './OutputBox';
+import { usePersistedState, clearPersistedState } from '../hooks/usePersistedState';
 
 const CareerTab: React.FC = () => {
-    const [jobDescription, setJobDescription] = useState('');
-    const [output, setOutput] = useState('');
+    const [jobDescription, setJobDescription] = usePersistedState('career_input', '');
+    const [output, setOutput] = usePersistedState('career_output', '');
     const [isLoading, setIsLoading] = useState(false);
     const [currentAction, setCurrentAction] = useState<string>('');
     const [apiAvailable, setApiAvailable] = useState<boolean | null>(null);
