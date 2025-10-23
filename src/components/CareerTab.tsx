@@ -5,17 +5,75 @@ import { Textarea } from './ui/Textarea';
 import OutputBox from './OutputBox';
 import { usePersistedState, clearPersistedState } from '../hooks/usePersistedState';
 
-const CareerTab: React.FC = () => {
-    const [jobDescription, setJobDescription] = usePersistedState('career_input', '');
+interface CareerTabProps {
+    initialText?: string;
+    contextAction?: string;
+    onActionProcessed?: () => void;
+}
+
+const CareerTab: React.FC<CareerTabProps> = ({ initialText = '', contextAction = '', onActionProcessed }) => {
+    const [jobDescription, setJobDescription] = usePersistedState('career_input', initialText);
     const [output, setOutput] = usePersistedState('career_output', '');
     const [isLoading, setIsLoading] = useState(false);
     const [currentAction, setCurrentAction] = useState<string>('');
     const [apiAvailable, setApiAvailable] = useState<boolean | null>(null);
+    const [triggerAction, setTriggerAction] = useState<string | null>(null);
 
     // Check API availability on mount
     useEffect(() => {
         checkAPIAvailability();
     }, []);
+
+    // Auto-run action if context menu was used
+    useEffect(() => {
+        if (initialText && contextAction) {
+            setJobDescription(initialText);
+            setTriggerAction(contextAction);
+        }
+    }, [initialText, contextAction]);
+
+    // Execute action when triggered
+    useEffect(() => {
+        if (triggerAction && jobDescription) {
+            if (triggerAction === 'generate-cover-letter') {
+                handleGenerateCoverLetter();
+            } else if (triggerAction === 'rephrase') {
+                handleRephraseParagraph();
+            } else if (triggerAction === 'extract-skills') {
+                handleExtractSkills();
+            }
+            setTriggerAction(null);
+        }
+    }, [triggerAction, jobDescription]);
+
+    // Listen for new context menu selections
+    useEffect(() => {
+        const handleStorageChange = (changes: any, area: string) => {
+            if (area === 'local' && changes.selectedText && changes.targetTab?.newValue === 'career') {
+                const newText = changes.selectedText.newValue;
+                const newAction = changes.action?.newValue;
+
+                if (newText && newAction) {
+                    setJobDescription(newText);
+                    setTriggerAction(newAction);
+                }
+            }
+        };
+
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+            chrome.storage.onChanged.addListener(handleStorageChange);
+            return () => {
+                chrome.storage.onChanged.removeListener(handleStorageChange);
+            };
+        }
+    }, []);
+
+    // Clear all data
+    const handleClear = () => {
+        setJobDescription('');
+        setOutput('');
+        clearPersistedState(['career_input', 'career_output']);
+    };
 
     const checkAPIAvailability = async () => {
         try {
@@ -298,9 +356,22 @@ const CareerTab: React.FC = () => {
             {/* Input Section */}
             <div className="space-y-4">
                 <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">
-                        Job Description
-                    </label>
+                    <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm font-medium text-foreground">
+                            Job Description
+                        </label>
+                        {(jobDescription || output) && (
+                            <Button
+                                onClick={handleClear}
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs"
+                            >
+                                <Trash2 className="w-3 h-3 mr-1" />
+                                Clear
+                            </Button>
+                        )}
+                    </div>
                     <Textarea
                         placeholder="Paste the job description or requirements you want to work with..."
                         value={jobDescription}

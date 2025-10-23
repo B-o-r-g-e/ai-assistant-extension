@@ -8,14 +8,16 @@ import { usePersistedState, clearPersistedState } from '../hooks/usePersistedSta
 interface StudyTabProps {
     initialText?: string;
     contextAction?: string;
+    onActionProcessed?: () => void;
 }
 
-const StudyTab: React.FC<StudyTabProps> = ({ initialText = '', contextAction = '' }) => {
+const StudyTab: React.FC<StudyTabProps> = ({ initialText = '', contextAction = '', onActionProcessed }) => {
     const [inputText, setInputText] = usePersistedState('study_input', initialText);
     const [output, setOutput] = usePersistedState('study_output', '');
     const [isLoading, setIsLoading] = useState(false);
     const [currentAction, setCurrentAction] = useState<string>('');
     const [apiAvailable, setApiAvailable] = useState<boolean | null>(null);
+    const [triggerAction, setTriggerAction] = useState<string | null>(null);
 
     // Check API availability on mount
     useEffect(() => {
@@ -25,13 +27,44 @@ const StudyTab: React.FC<StudyTabProps> = ({ initialText = '', contextAction = '
     // Auto-run action if context menu was used
     useEffect(() => {
         if (initialText && contextAction) {
-            if (contextAction === 'summarize') {
-                handleSummarize();
-            } else if (contextAction === 'proofread') {
-                handleProofread();
-            }
+            setInputText(initialText);
+            setTriggerAction(contextAction);
         }
     }, [initialText, contextAction]);
+
+    // Execute action when triggered
+    useEffect(() => {
+        if (triggerAction && inputText) {
+            if (triggerAction === 'summarize') {
+                handleSummarize();
+            } else if (triggerAction === 'proofread') {
+                handleProofread();
+            }
+            setTriggerAction(null);
+        }
+    }, [triggerAction, inputText]);
+
+    // Listen for new context menu selections (for when side panel is already open)
+    useEffect(() => {
+        const handleStorageChange = (changes: any, area: string) => {
+            if (area === 'local' && changes.selectedText && changes.targetTab?.newValue === 'study') {
+                const newText = changes.selectedText.newValue;
+                const newAction = changes.action?.newValue;
+
+                if (newText && newAction) {
+                    setInputText(newText);
+                    setTriggerAction(newAction);
+                }
+            }
+        };
+
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+            chrome.storage.onChanged.addListener(handleStorageChange);
+            return () => {
+                chrome.storage.onChanged.removeListener(handleStorageChange);
+            };
+        }
+    }, []);
 
     // Clear all data
     const handleClear = () => {
@@ -160,27 +193,53 @@ const StudyTab: React.FC<StudyTabProps> = ({ initialText = '', contextAction = '
                 // Format the output with corrections
                 let outputText = `✏️ **Proofread Results:**\n\n`;
 
+                // Check if there are corrections
                 if (proofreadResult.corrections && proofreadResult.corrections.length > 0) {
                     // Show corrected text if available
                     if (proofreadResult.corrected) {
                         outputText += `**Corrected Text:**\n${proofreadResult.corrected}\n\n`;
+                        outputText += `---\n\n`;
                     }
 
-                    outputText += `**Corrections Found (${proofreadResult.corrections.length}):**\n\n`;
+                    outputText += `**${proofreadResult.corrections.length} Correction(s) Found:**\n\n`;
 
-                    proofreadResult.corrections.forEach((correction: any, index: number) => {
-                        const originalText = inputText.substring(correction.startIndex, correction.endIndex);
-                        const replacement = correction.replacement || correction.correction || '[correction not available]';
+                    // Filter out meaningless corrections (like commas to nothing)
+                    const meaningfulCorrections = proofreadResult.corrections.filter((correction: any) => {
+                        const original = inputText.substring(correction.startIndex, correction.endIndex).trim();
+                        const replacement = (correction.replacement || correction.correction || '').trim();
 
-                        outputText += `${index + 1}. "${originalText}" → "${replacement}"\n`;
-                        if (correction.type) {
-                            outputText += `   Type: ${correction.type}\n`;
+                        // Skip if original and replacement are the same or both empty
+                        if (original === replacement || (!original && !replacement)) {
+                            return false;
                         }
-                        if (correction.explanation) {
-                            outputText += `   Explanation: ${correction.explanation}\n`;
+
+                        // Skip single punctuation replacements to nothing
+                        if (original.length === 1 && !replacement && /[,.\s]/.test(original)) {
+                            return false;
                         }
-                        outputText += `\n`;
+
+                        return true;
                     });
+
+                    if (meaningfulCorrections.length === 0) {
+                        outputText = `✅ **No significant corrections needed!**\n\nYour text looks good.`;
+                    } else {
+                        meaningfulCorrections.forEach((correction: any, index: number) => {
+                            const originalText = inputText.substring(correction.startIndex, correction.endIndex);
+                            const replacement = correction.replacement || correction.correction || '[suggested correction]';
+
+                            outputText += `${index + 1}. **Original:** "${originalText}"\n`;
+                            outputText += `   **Suggested:** "${replacement}"\n`;
+
+                            if (correction.type) {
+                                outputText += `   **Type:** ${correction.type}\n`;
+                            }
+                            if (correction.explanation) {
+                                outputText += `   **Why:** ${correction.explanation}\n`;
+                            }
+                            outputText += `\n`;
+                        });
+                    }
                 } else {
                     outputText += `✅ **No corrections needed!**\n\nYour text looks good.`;
                 }

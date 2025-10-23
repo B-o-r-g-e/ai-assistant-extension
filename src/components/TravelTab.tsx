@@ -5,20 +5,81 @@ import { Textarea } from './ui/Textarea';
 import OutputBox from './OutputBox';
 import { usePersistedState, clearPersistedState } from '../hooks/usePersistedState';
 
-const TravelTab: React.FC = () => {
-    const [textInput, setTextInput] = usePersistedState('travel_input', '');
+interface TravelTabProps {
+    initialText?: string;
+    contextAction?: string;
+    onActionProcessed?: () => void;
+}
+
+const TravelTab: React.FC<TravelTabProps> = ({ initialText = '', contextAction = '', onActionProcessed }) => {
+    const [textInput, setTextInput] = usePersistedState('travel_input', initialText);
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
-    const [output, setOutput] = useState('');
+    const [output, setOutput] = usePersistedState('travel_output', '');
     const [isLoading, setIsLoading] = useState(false);
     const [currentAction, setCurrentAction] = useState<string>('');
     const [apiAvailable, setApiAvailable] = useState<boolean | null>(null);
+    const [triggerAction, setTriggerAction] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Check API availability on mount
     useEffect(() => {
         checkAPIAvailability();
     }, []);
+
+    // Auto-run action if context menu was used
+    useEffect(() => {
+        if (initialText && contextAction) {
+            setTextInput(initialText);
+            setTriggerAction(contextAction);
+        }
+    }, [initialText, contextAction]);
+
+    // Execute action when triggered
+    useEffect(() => {
+        if (triggerAction && textInput) {
+            if (triggerAction === 'translate') {
+                handleTranslateText();
+            } else if (triggerAction === 'travel-insights') {
+                handleExplainContent();
+            }
+            setTriggerAction(null);
+        }
+    }, [triggerAction, textInput]);
+
+    // Listen for new context menu selections
+    useEffect(() => {
+        const handleStorageChange = (changes: any, area: string) => {
+            if (area === 'local' && changes.selectedText && changes.targetTab?.newValue === 'travel') {
+                const newText = changes.selectedText.newValue;
+                const newAction = changes.action?.newValue;
+
+                if (newText && newAction) {
+                    setTextInput(newText);
+                    setTriggerAction(newAction);
+                }
+            }
+        };
+
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+            chrome.storage.onChanged.addListener(handleStorageChange);
+            return () => {
+                chrome.storage.onChanged.removeListener(handleStorageChange);
+            };
+        }
+    }, []);
+
+    // Clear all data
+    const handleClear = () => {
+        setTextInput('');
+        setOutput('');
+        setSelectedImage(null);
+        setImagePreview(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+        clearPersistedState(['travel_input', 'travel_output']);
+    };
 
     const checkAPIAvailability = async () => {
         try {
@@ -283,9 +344,22 @@ const TravelTab: React.FC = () => {
 
                 {/* Text Input */}
                 <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">
-                        Text to Translate or Context
-                    </label>
+                    <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm font-medium text-foreground">
+                            Text to Translate or Context
+                        </label>
+                        {(textInput || output || selectedImage) && (
+                            <Button
+                                onClick={handleClear}
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs"
+                            >
+                                <Trash2 className="w-3 h-3 mr-1" />
+                                Clear All
+                            </Button>
+                        )}
+                    </div>
                     <Textarea
                         placeholder="Enter text in any language, or provide context about your travel needs..."
                         value={textInput}
