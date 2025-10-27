@@ -60,10 +60,10 @@ The extension interacts with Chrome’s built-in **AI APIs** directly:
 git clone https://github.com/<your-username>/ai-assistant-extension.git
 cd ai-assistant-extension
 
-### 2️⃣ Install Dependencies
+### 2 Install Dependencies
 ```bash
 npm install 
 
-### 3️⃣ Build the Project
+### 3️Build the Project
 ```bash
 npm run build
