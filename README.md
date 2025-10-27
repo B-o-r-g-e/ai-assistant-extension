@@ -1,73 +1,69 @@
-# React + TypeScript + Vite
+# 🧠 AI Assistant for Everyday Life – Chrome Extension
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Smart. Private. Offline.**  
+An all-in-one Chrome Extension powered by **Gemini Nano** and Chrome’s **Built-in AI APIs** that helps users study smarter, write better, and travel easier — all directly in their browser.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🚀 Overview
 
-## React Compiler
+**AI Assistant for Everyday Life** transforms how users interact with the web by bringing on-device AI capabilities — summarization, proofreading, rewriting, and translation — right into Chrome.  
+Unlike cloud-based tools, all AI features work locally on the user’s device using **Gemini Nano**, ensuring **speed, privacy, and offline access**.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## 🎯 Features
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### 📚 Study Mode
+- Summarize articles, research papers, or any selected web content using the **Summarizer API**.
+- Get structured notes, bullet points, and clear takeaways instantly.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### 💼 Career Mode
+- Write professional cover letters using the **Writer API**.
+- Fix grammar and style errors with the **Proofreader API**.
+- Rephrase or improve existing text using the **Rewriter API**.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### 🌍 Travel Mode
+- Translate text or images using the **Translator API**.
+- Works seamlessly even when offline, thanks to client-side AI processing.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+---
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 🧩 Core Technologies
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+| Category | Technology Used |
+|-----------|----------------|
+| Frontend | React + TypeScript + Vite |
+| UI Library | shadcn/ui + Tailwind CSS |
+| Animations | Framer Motion |
+| Backend | None (fully client-side) |
+| AI APIs | Chrome Built-in AI (Gemini Nano) |
+| Browser | Chrome Extension (Manifest V3) |
+| Version Control | Git + GitHub |
+| Build Tool | Vite |
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+---
+
+## ⚙️ How It Works
+
+The extension interacts with Chrome’s built-in **AI APIs** directly:
+- Uses the **Prompt API** for dynamic context understanding.
+- Integrates the **Summarizer**, **Proofreader**, **Rewriter**, **Writer**, and **Translator APIs** for intelligent content processing.
+- All requests and responses happen **locally**, ensuring user data never leaves the device.
+
+---
+
+## 🏗️ Project Setup
+
+### 1️⃣ Clone the Repository
+```bash
+git clone https://github.com/<your-username>/ai-assistant-extension.git
+cd ai-assistant-extension
+
+### 2️⃣ Install Dependencies
+```bash
+npm install 
+
+### 3️⃣ Build the Project
+```bash
+npm run build
