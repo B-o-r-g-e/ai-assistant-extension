@@ -19,41 +19,70 @@ function App() {
     const [activeTab, setActiveTab] = useState<TabType>('study');
     const [selectedText, setSelectedText] = useState<string>('');
     const [contextAction, setContextAction] = useState<string>('');
+    const [hasProcessedAction, setHasProcessedAction] = useState(false);
 
     // Check for context menu selections on load
     useEffect(() => {
         if (typeof chrome !== 'undefined' && chrome.runtime) {
-            chrome.runtime.sendMessage({ type: 'GET_SELECTED_TEXT' }, (response: any) => {
+            chrome.runtime.sendMessage({ type: 'GET_SELECTED_TEXT' }, (response) => {
                 if (response?.selectedText) {
                     setSelectedText(response.selectedText);
                     setContextAction(response.action || '');
-                    // Switch to study tab if text was selected for AI processing
-                    if (response.action) {
-                        setActiveTab('study');
+
+                    // Switch to appropriate tab based on targetTab
+                    if (response.targetTab) {
+                        setActiveTab(response.targetTab as TabType);
                     }
+
+                    // Mark as not processed yet
+                    setHasProcessedAction(false);
                 }
             });
         }
     }, []);
+
+    // Clear selected text and action after processing
+    const handleActionProcessed = () => {
+        if (!hasProcessedAction) {
+            setHasProcessedAction(true);
+            // Clear after a short delay to ensure component received the props
+            setTimeout(() => {
+                setSelectedText('');
+                setContextAction('');
+            }, 500);
+        }
+    };
 
     const tabs: Tab[] = [
         {
             id: 'study',
             label: 'Study',
             icon: <BookOpen className="w-4 h-4" />,
-            component: <StudyTab initialText={selectedText} contextAction={contextAction} />
+            component: <StudyTab
+                initialText={selectedText}
+                contextAction={contextAction}
+                onActionProcessed={handleActionProcessed}
+            />
         },
         {
             id: 'career',
             label: 'Career',
             icon: <Briefcase className="w-4 h-4" />,
-            component: <CareerTab />
+            component: <CareerTab
+                initialText={selectedText}
+                contextAction={contextAction}
+                onActionProcessed={handleActionProcessed}
+            />
         },
         {
             id: 'travel',
             label: 'Travel',
             icon: <Plane className="w-4 h-4" />,
-            component: <TravelTab />
+            component: <TravelTab
+                initialText={selectedText}
+                contextAction={contextAction}
+                onActionProcessed={handleActionProcessed}
+            />
         }
     ];
 

@@ -4,18 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e8ab8061-1af9-49ac-91c7-e1c743b4171b" name="Changes" comment="first commit">
+    <list default="true" id="e8ab8061-1af9-49ac-91c7-e1c743b4171b" name="Changes" comment="solved the floating button bugs abd other bugs">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/background.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/background.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/manifest.json" beforeDir="false" afterPath="$PROJECT_DIR$/public/manifest.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/node_modules/.package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/node_modules/.package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/node_modules/.vite/deps/_metadata.json" beforeDir="false" afterPath="$PROJECT_DIR$/node_modules/.vite/deps/_metadata.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/App.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tsconfig.app.json" beforeDir="false" afterPath="$PROJECT_DIR$/tsconfig.app.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tsconfig.json" beforeDir="false" afterPath="$PROJECT_DIR$/tsconfig.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vite.config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/vite.config.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -65,6 +56,7 @@
     &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
     &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;build&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
@@ -89,6 +81,8 @@
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/public" />
+      <recent name="$PROJECT_DIR$" />
+      <recent name="$PROJECT_DIR$/dist" />
       <recent name="$PROJECT_DIR$/src" />
     </key>
   </component>
@@ -112,6 +106,24 @@
       <workItem from="1759199768219" duration="960000" />
       <workItem from="1759356055411" duration="1408000" />
       <workItem from="1759359449988" duration="390000" />
+      <workItem from="1759844153571" duration="940000" />
+      <workItem from="1759846614294" duration="59000" />
+      <workItem from="1760497421651" duration="7408000" />
+      <workItem from="1760562559836" duration="576000" />
+      <workItem from="1760630168287" duration="335000" />
+      <workItem from="1760707111419" duration="457000" />
+      <workItem from="1760711619521" duration="1853000" />
+      <workItem from="1760766484501" duration="7053000" />
+      <workItem from="1760959722476" duration="1304000" />
+      <workItem from="1760962667420" duration="843000" />
+      <workItem from="1760969984290" duration="71000" />
+      <workItem from="1761039330154" duration="144000" />
+      <workItem from="1761138178894" duration="733000" />
+      <workItem from="1761140561123" duration="6813000" />
+      <workItem from="1761219823789" duration="3906000" />
+      <workItem from="1761554765007" duration="491000" />
+      <workItem from="1761563569833" duration="791000" />
+      <workItem from="1761570301185" duration="341000" />
     </task>
     <task id="LOCAL-00001" summary="first commit">
       <option name="closed" value="true" />
@@ -121,7 +133,31 @@
       <option name="project" value="LOCAL" />
       <updated>1759195398516</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="changed chrome.ai to windows.ai">
+      <option name="closed" value="true" />
+      <created>1760504252058</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1760504252058</updated>
+    </task>
+    <task id="LOCAL-00003" summary="integrated prompt api, summarizer api and proofreader api">
+      <option name="closed" value="true" />
+      <created>1760542826756</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1760542826756</updated>
+    </task>
+    <task id="LOCAL-00004" summary="solved the floating button bugs abd other bugs">
+      <option name="closed" value="true" />
+      <created>1761224163929</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1761224163929</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -140,6 +176,9 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="first commit" />
-    <option name="LAST_COMMIT_MESSAGE" value="first commit" />
+    <MESSAGE value="changed chrome.ai to windows.ai" />
+    <MESSAGE value="integrated prompt api, summarizer api and proofreader api" />
+    <MESSAGE value="solved the floating button bugs abd other bugs" />
+    <option name="LAST_COMMIT_MESSAGE" value="solved the floating button bugs abd other bugs" />
   </component>
 </project>

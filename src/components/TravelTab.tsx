@@ -1,17 +1,107 @@
-import React, { useState, useRef } from 'react';
-import { Plane, Upload, Globe, Image as ImageIcon, Loader2, X } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Plane, Upload, Globe, Image as ImageIcon, Loader2, X, Trash2 } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Textarea } from './ui/Textarea';
 import OutputBox from './OutputBox';
+import { usePersistedState, clearPersistedState } from '../hooks/usePersistedState';
 
-const TravelTab: React.FC = () => {
-    const [textInput, setTextInput] = useState('');
+interface TravelTabProps {
+    initialText?: string;
+    contextAction?: string;
+    onActionProcessed?: () => void;
+}
+
+const TravelTab: React.FC<TravelTabProps> = ({ initialText = '', contextAction = '', onActionProcessed }) => {
+    const [textInput, setTextInput] = usePersistedState('travel_input', initialText);
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
-    const [output, setOutput] = useState('');
+    const [output, setOutput] = usePersistedState('travel_output', '');
     const [isLoading, setIsLoading] = useState(false);
     const [currentAction, setCurrentAction] = useState<string>('');
+    const [apiAvailable, setApiAvailable] = useState<boolean | null>(null);
+    const [triggerAction, setTriggerAction] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Check API availability on mount
+    useEffect(() => {
+        checkAPIAvailability();
+    }, []);
+
+    // Auto-run action if context menu was used
+    useEffect(() => {
+        if (initialText && contextAction) {
+            setTextInput(initialText);
+            setTriggerAction(contextAction);
+        }
+    }, [initialText, contextAction]);
+
+    // Execute action when triggered
+    useEffect(() => {
+        if (triggerAction && textInput) {
+            if (triggerAction === 'translate') {
+                handleTranslateText();
+            } else if (triggerAction === 'travel-insights') {
+                handleExplainContent();
+            }
+            setTriggerAction(null);
+        }
+    }, [triggerAction, textInput]);
+
+    // Listen for new context menu selections
+    useEffect(() => {
+        const handleStorageChange = (changes: any, area: string) => {
+            if (area === 'local' && changes.selectedText && changes.targetTab?.newValue === 'travel') {
+                const newText = changes.selectedText.newValue;
+                const newAction = changes.action?.newValue;
+
+                if (newText && newAction) {
+                    setTextInput(newText);
+                    setTriggerAction(newAction);
+                }
+            }
+        };
+
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+            chrome.storage.onChanged.addListener(handleStorageChange);
+            return () => {
+                chrome.storage.onChanged.removeListener(handleStorageChange);
+            };
+        }
+    }, []);
+
+    // Clear all data
+    const handleClear = () => {
+        setTextInput('');
+        setOutput('');
+        setSelectedImage(null);
+        setImagePreview(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+        clearPersistedState(['travel_input', 'travel_output']);
+    };
+
+    const checkAPIAvailability = async () => {
+        try {
+            if (typeof LanguageModel !== 'undefined') {
+                const availability = await LanguageModel.availability();
+                console.log('LanguageModel availability:', availability);
+                setApiAvailable(availability === 'readily' || availability === 'after-download');
+            } else if (typeof Translator !== 'undefined') {
+                console.log('Translator API found');
+                setApiAvailable(true);
+            } else if (window.ai?.languageModel) {
+                const capabilities = await window.ai.languageModel.capabilities();
+                setApiAvailable(capabilities.available === 'readily' || capabilities.available === 'after-download');
+            } else {
+                console.log('No translation APIs found');
+                setApiAvailable(false);
+            }
+        } catch (error) {
+            console.error('API check failed:', error);
+            setApiAvailable(false);
+        }
+    };
 
     // Handle image file selection
     const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -19,7 +109,6 @@ const TravelTab: React.FC = () => {
         if (file && file.type.startsWith('image/')) {
             setSelectedImage(file);
 
-            // Create preview
             const reader = new FileReader();
             reader.onload = (e) => {
                 setImagePreview(e.target?.result as string);
@@ -37,7 +126,7 @@ const TravelTab: React.FC = () => {
         }
     };
 
-    // Translate text using Chrome AI Translator API
+    // Translate text
     const handleTranslateText = async () => {
         if (!textInput.trim() && !selectedImage) return;
 
@@ -46,32 +135,70 @@ const TravelTab: React.FC = () => {
         setOutput('');
 
         try {
-            let textToTranslate = textInput;
-
-            // If there's an image but no text, we'd need to extract text from image first
             if (selectedImage && !textInput.trim()) {
-                // This would typically involve OCR, but for demo we'll simulate
-                textToTranslate = "Text extracted from image (simulated)";
+                setOutput('📸 **Note**: Please add the text you want to translate in the text box. Image OCR is not yet supported.');
+                setIsLoading(false);
+                setCurrentAction('');
+                return;
             }
 
-            if (typeof chrome !== 'undefined' && chrome.ai?.translator) {
-                const translator = await chrome.ai.translator.create({ targetLanguage: 'en' });
-                const result = await translator.translate(textToTranslate);
-                setOutput(result.translations);
+            const textToTranslate = textInput;
+
+            // Try LanguageModel first (best for auto-detection)
+            if (typeof LanguageModel !== 'undefined') {
+                console.log('Using LanguageModel API for translation');
+
+                const availability = await LanguageModel.availability();
+                if (availability === 'no') {
+                    throw new Error('LanguageModel not available');
+                }
+
+                const session = await LanguageModel.create({
+                    initialPrompts: [
+                        {
+                            role: 'system',
+                            content: 'You are a professional translator. Translate any text to English accurately. Only output the translation, nothing else.'
+                        }
+                    ],
+                    monitor(m: any) {
+                        m.addEventListener('downloadprogress', (e: any) => {
+                            setCurrentAction(`Downloading AI model: ${Math.round(e.loaded * 100)}%`);
+                        });
+                    }
+                });
+
+                const result = await session.prompt(textToTranslate);
+                setOutput(`🌍 **Translation to English:**\n\n**Original:**\n"${textToTranslate}"\n\n**Translated:**\n"${result.trim()}"`);
+                session.destroy();
+
+            } else if (window.ai?.languageModel) {
+                console.log('Using window.ai.languageModel for translation');
+
+                const session = await window.ai.languageModel.create({
+                    systemPrompt: 'You are a professional translator. Translate to English accurately.',
+                    monitor(m: any) {
+                        m.addEventListener('downloadprogress', (e: any) => {
+                            setCurrentAction(`Downloading AI model: ${Math.round(e.loaded * 100)}%`);
+                        });
+                    }
+                });
+
+                const result = await session.prompt(`Translate to English:\n\n${textToTranslate}`);
+                setOutput(`🌍 **Translation to English:**\n\n**Original:**\n"${textToTranslate}"\n\n**Translated:**\n"${result.trim()}"`);
+
             } else {
-                // Fallback for development/testing
-                setOutput(`🌍 **Translation to English** (Demo Mode - Chrome AI not available):\n\n**Original Text:**\n"${textToTranslate}"\n\n**Translated:**\nThis is a simulated translation to English. In a real Chrome environment with Gemini Nano enabled, this would provide accurate translations from various languages.\n\n**Detected Language:** Auto-detected\n**Confidence:** High\n\n${selectedImage ? '📸 **Note:** Translation includes text extracted from the uploaded image.' : ''}`);
+                setOutput(`🌍 **Translation** (Demo Mode):\n\n**Original:**\n"${textToTranslate.substring(0, 100)}${textToTranslate.length > 100 ? '...' : ''}"\n\n**Enable Chrome AI:**\n1. chrome://flags/#prompt-api-for-gemini-nano\n2. chrome://components/ - Download model\n3. Restart Chrome`);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Translation failed:', error);
-            setOutput('❌ **Error**: Unable to translate text. Make sure Chrome AI features are enabled.');
+            setOutput(`❌ **Error**: ${error.message || 'Unable to translate text.'}`);
         }
 
         setIsLoading(false);
         setCurrentAction('');
     };
 
-    // Generate explanation from image/text using Chrome AI Prompt API
+    // Get travel insights
     const handleExplainContent = async () => {
         if (!textInput.trim() && !selectedImage) return;
 
@@ -81,26 +208,60 @@ const TravelTab: React.FC = () => {
 
         try {
             let prompt = '';
-            let imageBlob: Blob | undefined = undefined;
 
-            if (selectedImage) {
-                prompt = `Explain what you see in this image and provide helpful travel information about it. ${textInput ? `Additional context: ${textInput}` : ''}`;
-                imageBlob = selectedImage;
+            if (selectedImage && textInput) {
+                prompt = `I have an image (${selectedImage.name}) and this text: "${textInput}". Provide helpful travel information, cultural context, and explanations.`;
+            } else if (selectedImage) {
+                prompt = `I have an image (${selectedImage.name}). Provide general travel tips for dealing with menus, signs, and documents in foreign countries.`;
             } else {
-                prompt = `Provide helpful travel information and explanation about: ${textInput}`;
+                prompt = `Provide helpful travel information and cultural context about: ${textInput}`;
             }
 
-            if (typeof chrome !== 'undefined' && chrome.ai?.prompt) {
-                const session = await chrome.ai.prompt.create({ multimodal: true });
-                const result = await session.prompt({ text: prompt, image: imageBlob });
-                setOutput(result.output);
+            if (typeof LanguageModel !== 'undefined') {
+                console.log('Using LanguageModel API for travel insights');
+
+                const availability = await LanguageModel.availability();
+                if (availability === 'no') {
+                    throw new Error('LanguageModel not available');
+                }
+
+                const session = await LanguageModel.create({
+                    initialPrompts: [
+                        {
+                            role: 'system',
+                            content: 'You are a knowledgeable travel assistant. Provide helpful information about locations, cultural context, travel tips, and practical advice.'
+                        }
+                    ],
+                    monitor(m: any) {
+                        m.addEventListener('downloadprogress', (e: any) => {
+                            setCurrentAction(`Downloading AI model: ${Math.round(e.loaded * 100)}%`);
+                        });
+                    }
+                });
+
+                const result = await session.prompt(prompt);
+                setOutput(`🧭 **Travel Insights:**\n\n${result}`);
+                session.destroy();
+
+            } else if (window.ai?.languageModel) {
+                const session = await window.ai.languageModel.create({
+                    systemPrompt: 'You are a knowledgeable travel assistant.',
+                    monitor(m: any) {
+                        m.addEventListener('downloadprogress', (e: any) => {
+                            setCurrentAction(`Downloading AI model: ${Math.round(e.loaded * 100)}%`);
+                        });
+                    }
+                });
+
+                const result = await session.prompt(prompt);
+                setOutput(`🧭 **Travel Insights:**\n\n${result}`);
+
             } else {
-                // Fallback for development/testing
-                setOutput(`🧭 **Content Analysis** (Demo Mode - Chrome AI not available):\n\n**Analysis:**\nThis is a simulated explanation of your content. In a real Chrome environment with Gemini Nano enabled, this would provide detailed insights about:\n\n${selectedImage ? '📸 **Image Analysis:**\n• Visual elements and landmarks\n• Cultural context and significance\n• Travel tips and recommendations\n\n' : ''}**Text Analysis:**\n"${textInput || 'No additional text provided'}"\n\n**Travel Insights:**\n• Location information\n• Cultural tips\n• Language assistance\n• Local recommendations\n\n**Helpful Suggestions:**\n• Best times to visit\n• What to expect\n• Cultural etiquette tips`);
+                setOutput(`🧭 **Travel Insights** (Demo Mode):\n\n${selectedImage ? '📸 Image: ' + selectedImage.name + '\n\n' : ''}**Text:** "${textInput || 'None'}"\n\n**Enable Chrome AI for real insights.**`);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Content analysis failed:', error);
-            setOutput('❌ **Error**: Unable to analyze content. Make sure Chrome AI features are enabled.');
+            setOutput(`❌ **Error**: ${error.message || 'Unable to analyze content.'}`);
         }
 
         setIsLoading(false);
@@ -117,12 +278,27 @@ const TravelTab: React.FC = () => {
                 <div>
                     <h2 className="text-xl font-semibold">Travel Mode</h2>
                     <p className="text-sm text-muted-foreground">
-                        Translate text and analyze images for travel assistance
+                        Translate text and get travel assistance
                     </p>
                 </div>
             </div>
 
-            {/* Image Upload Section */}
+            {/* API Status */}
+            {apiAvailable !== null && (
+                <div className={`p-3 rounded-lg text-sm ${
+                    apiAvailable
+                        ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800'
+                        : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
+                }`}>
+                    {apiAvailable ? (
+                        <span>✅ Chrome AI is available and ready</span>
+                    ) : (
+                        <span>⚠️ Chrome AI not available - using demo mode</span>
+                    )}
+                </div>
+            )}
+
+            {/* Image Upload */}
             <div className="space-y-4">
                 <div>
                     <label className="text-sm font-medium text-foreground mb-2 block">
@@ -132,11 +308,7 @@ const TravelTab: React.FC = () => {
                         {imagePreview ? (
                             <div className="space-y-3">
                                 <div className="relative inline-block">
-                                    <img
-                                        src={imagePreview}
-                                        alt="Preview"
-                                        className="max-h-32 rounded-lg shadow-sm"
-                                    />
+                                    <img src={imagePreview} alt="Preview" className="max-h-32 rounded-lg shadow-sm" />
                                     <button
                                         onClick={handleRemoveImage}
                                         className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 hover:bg-destructive/80"
@@ -144,22 +316,16 @@ const TravelTab: React.FC = () => {
                                         <X className="w-3 h-3" />
                                     </button>
                                 </div>
-                                <p className="text-sm text-muted-foreground">
-                                    {selectedImage?.name}
-                                </p>
+                                <p className="text-sm text-muted-foreground">{selectedImage?.name}</p>
                             </div>
                         ) : (
                             <div className="space-y-3">
                                 <ImageIcon className="w-8 h-8 text-muted-foreground mx-auto" />
                                 <div>
                                     <p className="text-sm text-muted-foreground mb-2">
-                                        Upload a menu, sign, or any image with text
+                                        Upload a menu, sign, or travel-related image
                                     </p>
-                                    <Button
-                                        onClick={() => fileInputRef.current?.click()}
-                                        variant="outline"
-                                        size="sm"
-                                    >
+                                    <Button onClick={() => fileInputRef.current?.click()} variant="outline" size="sm">
                                         <Upload className="w-4 h-4 mr-2" />
                                         Choose Image
                                     </Button>
@@ -176,13 +342,26 @@ const TravelTab: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Text Input Section */}
+                {/* Text Input */}
                 <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">
-                        Text to Translate or Analyze (Optional)
-                    </label>
+                    <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm font-medium text-foreground">
+                            Text to Translate or Context
+                        </label>
+                        {(textInput || output || selectedImage) && (
+                            <Button
+                                onClick={handleClear}
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs"
+                            >
+                                <Trash2 className="w-3 h-3 mr-1" />
+                                Clear All
+                            </Button>
+                        )}
+                    </div>
                     <Textarea
-                        placeholder="Enter text in any language, or provide additional context for your image..."
+                        placeholder="Enter text in any language, or provide context about your travel needs..."
                         value={textInput}
                         onChange={(e) => setTextInput(e.target.value)}
                         className="min-h-[100px] resize-none"
@@ -193,11 +372,11 @@ const TravelTab: React.FC = () => {
                 <div className="grid grid-cols-1 gap-3">
                     <Button
                         onClick={handleTranslateText}
-                        disabled={(!textInput.trim() && !selectedImage) || isLoading}
+                        disabled={!textInput.trim() || isLoading}
                         className="w-full"
                         variant="default"
                     >
-                        {isLoading && currentAction === 'Translating to English' ? (
+                        {isLoading && currentAction.includes('Translating') ? (
                             <Loader2 className="w-4 h-4 animate-spin mr-2" />
                         ) : (
                             <Globe className="w-4 h-4 mr-2" />
@@ -211,17 +390,17 @@ const TravelTab: React.FC = () => {
                         variant="outline"
                         className="w-full"
                     >
-                        {isLoading && currentAction === 'Analyzing content' ? (
+                        {isLoading && currentAction.includes('Analyzing') ? (
                             <Loader2 className="w-4 h-4 animate-spin mr-2" />
                         ) : (
                             <ImageIcon className="w-4 h-4 mr-2" />
                         )}
-                        Explain Content
+                        Get Travel Insights
                     </Button>
                 </div>
             </div>
 
-            {/* Output Section */}
+            {/* Output */}
             {(output || isLoading) && (
                 <OutputBox
                     content={output}
@@ -234,10 +413,10 @@ const TravelTab: React.FC = () => {
             <div className="bg-muted/50 rounded-lg p-4 space-y-2">
                 <h3 className="font-medium text-sm">✈️ Travel Tips</h3>
                 <ul className="text-xs text-muted-foreground space-y-1">
-                    <li>• Upload photos of menus, signs, or documents to translate</li>
-                    <li>• Add context text to get better explanations</li>
-                    <li>• Works with multiple languages automatically</li>
-                    <li>• Great for understanding local culture and customs</li>
+                    <li>• Enter text in any language to translate to English</li>
+                    <li>• Upload images for visual reference (OCR coming soon)</li>
+                    <li>• Get cultural context and travel advice</li>
+                    <li>• First use may take time to download the AI model</li>
                 </ul>
             </div>
         </div>
