@@ -60,10 +60,86 @@ The extension interacts with Chrome’s built-in **AI APIs** directly:
 git clone https://github.com/<your-username>/ai-assistant-extension.git
 cd ai-assistant-extension
 
-### 2 Install Dependencies
+### 2️⃣ Install Dependencies
 ```bash
-npm install 
+npm install
+```
 
-### 3️Build the Project
+### 3️⃣ Build the Extension
 ```bash
 npm run build
+```
+
+### 4️⃣ Load into Chrome
+- Open Chrome and navigate to `chrome://extensions/`.
+- Enable "Developer mode" (top right).
+  - Click "Load unpacked" and select the `dist` folder from the project directory.
+
+### 5️⃣ Start Using
+- Click the extension icon in the toolbar to open the AI Assistant.
+
+### 5️⃣ Start Using
+
+1. Open any webpage.
+2. Highlight the text you want to process and right\-click.
+3. Choose an action such as Summarize, Proofread, Rewrite, or Translate.
+4. Alternatively, click the extension icon in the toolbar to open the AI Assistant.
+
+## 🧠 What Inspired This Project
+
+The idea came from everyday frustration \— switching between multiple tools for studying, writing, and translating.
+The goal was to combine all of them into one lightweight, privacy-focused assistant that works offline using Chrome’s new built-in AI.
+
+## 🧩 Challenges Faced
+
+- Integrating multiple Chrome AI APIs in one extension.
+- Ensuring smooth UX and fast response without cloud latency.
+- Handling different content types (text, selections, images).
+
+## 🏆 Accomplishments
+
+- Fully functional multi-mode Chrome Extension using Gemini Nano.
+- Zero backend \— 100% client-side AI.
+- Clean, responsive UI built with React + shadcn/ui.
+- Seamless context menu integration for quick actions.
+
+## 🔮 What’s Next
+
+- Add voice command support and speech translation.
+- Implement note-saving with Firebase for optional cloud sync.
+- Support for multi-tab AI memory (context awareness).
+- Launch on Chrome Web Store for public use.
+
+## 🧭 System Architecture
+
++------------------------------------------------------+
+|                Chrome Browser (User Side)            |
+|------------------------------------------------------|
+|  AI Assistant Extension UI (React + Tailwind + shadcn/ui) |
+|         ↓                                              |
+|  Chrome Built-in AI APIs (Prompt, Summarizer, etc.)    |
+|         ↓                                              |
+|  Gemini Nano (Local AI Inference Engine)               |
+|         ↓                                              |
+|  Output: Summaries, Rewrites, Proofreads, Translations |
++------------------------------------------------------+
+
+Everything happens locally \— no external servers, no data leakage.
+
+## 🎬 Demo Video
+
+▶️ Watch the demo video: YouTube Link Here \- https://youtu.be/Hdk4bGrmpBI
+
+## 📜 License
+
+This project is licensed under the MIT License.
+
+## 🤝 Contributing
+
+Contributions are welcome! Fork the repository, make your improvements, and submit a pull request.
+
+## 💡 Author
+
+Oluwapelumi Babalola  
+Built for the Google Chrome Built-in AI Challenge 2025  
+Follow my journey on GitHub: `https://github.com/B-o-r-g-e` or X: `https://x.com/b_o_r_g_e`
