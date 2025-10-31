@@ -128,7 +128,7 @@ Everything happens locally \— no external servers, no data leakage.
 
 ## 🎬 Demo Video
 
-▶️ Watch the demo video: YouTube Link Here \- https://youtu.be/Hdk4bGrmpBI
+▶️ Watch the demo video: YouTube Link Here \- https://youtu.be/nCR3WWzkPUc
 
 ## 📜 License
 
